@@ -556,14 +556,66 @@ fn draw(frame: &mut Frame, grid: Grid) {
     frame.render_widget(paragraph, centered_area);
 
     // Help paragraph
-    let help_text = Text::from(vec![
-        Line::from("Controls:"),
-        Line::from("  Up: Rotate"),
-        Line::from("  Down: Drop"),
-        Line::from("  Left: Move Left"),
-        Line::from("  Right: Move Right"),
-        Line::from("  Q: Quit"),
-    ]);
+    let help_text = "Controls:
+    ←: Move left
+    →: Move right
+    ↑: Rotate
+    ↓: Move down
+    q: Quit
+    ";
+
+    // now make a little preview of the next shape, with the same colors   
+    let repr = match grid.next_shape {
+        Shape::I => vec![
+            Line::from(format!("{}{}{}{}", block::FULL.repeat(2), block::FULL.repeat(2), block::FULL.repeat(2), block::FULL.repeat(2))).fg(Color::Red),
+        ],
+        Shape::O => vec![
+            Line::from(format!("{}{}", block::FULL.repeat(2), block::FULL.repeat(2))).fg(Color::Blue),
+            Line::from(format!("{}{}", block::FULL.repeat(2), block::FULL.repeat(2))).fg(Color::Blue),
+        ],
+        Shape::T => vec![
+            Line::from(format!("{}{}{}", block::FULL.repeat(2), block::FULL.repeat(2), block::FULL.repeat(2))).fg(Color::Rgb(255, 165, 0)),
+            Line::from(format!("  {}  ", block::FULL.repeat(2))).fg(Color::Rgb(255, 165, 0)),
+        ],
+        Shape::S => vec![
+            Line::from(format!("  {}{}", block::FULL.repeat(2), block::FULL.repeat(2))).fg(Color::Green),
+            Line::from(format!("{}{}", block::FULL.repeat(2), block::FULL.repeat(2))).fg(Color::Green),
+        ],
+        Shape::Z => vec![
+            Line::from(format!("{}{}", block::FULL.repeat(2), block::FULL.repeat(2))).fg(Color::Cyan),
+            Line::from(format!("  {}{}", block::FULL.repeat(2), block::FULL.repeat(2))).fg(Color::Cyan),
+        ],
+        Shape::J => vec![
+            Line::from(format!("{}{}", block::FULL.repeat(2), block::FULL.repeat(2))).fg(Color::White),
+            Line::from(format!("{}  ", block::FULL.repeat(2))).fg(Color::White),
+            Line::from(format!("{}  ", block::FULL.repeat(2))).fg(Color::White),
+        ],
+        Shape::L => vec![
+            Line::from(format!("{}{}", block::FULL.repeat(2), block::FULL.repeat(2))).fg(Color::Magenta),
+            Line::from(format!("  {}", block::FULL.repeat(2))).fg(Color::Magenta),
+            Line::from(format!("  {}", block::FULL.repeat(2))).fg(Color::Magenta),
+        ],
+    };
+
+    // concat the repr with "Next Shape:" and make sure ONLY the next shape is colored
+    let mut next_shape_text = Text::from(vec![
+        Line::from("Next Shape:").fg(Color::White),
+        Line::from(""),
+    ]).lines;
+
+    for line in repr {
+        next_shape_text.push(line);
+    }
+
+    let next_shape_paragraph = Paragraph::new(next_shape_text);
+    let next_shape_area = ratatui::layout::Rect::new(
+        area.x + 1,
+        area.y + area.height - 10,
+        20,
+        5,
+    );
+    frame.render_widget(next_shape_paragraph, next_shape_area);
+
     let help_paragraph = Paragraph::new(help_text);
     let help_area = ratatui::layout::Rect::new(
         area.x + 1,
