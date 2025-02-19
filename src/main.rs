@@ -90,7 +90,7 @@ impl Grid {
         }
         self.shape_has_existed_for = 0;
         self.shape_history.push(self.next_shape);
-        if self.shape_history.len() % 25 == 0 {
+        if self.shape_history.len() % 25 == 0 && self.level < 10 {
             self.level += 1;
         }
         self.active_shape = Some(self.next_shape);
@@ -562,6 +562,9 @@ fn draw(frame: &mut Frame, grid: Grid) {
     ↑: Rotate
     ↓: Move down
     q: Quit
+
+Options:
+    -l, --level: Start at a specific level (1-10)
     ";
 
     // now make a little preview of the next shape, with the same colors   
