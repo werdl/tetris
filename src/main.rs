@@ -86,33 +86,34 @@ struct Options {
 
     /// Path to the config file
     #[arg(short, long, default_value = "config.json")]
-    config: String,
+    config_file: String,
 
     /// Create a configuration file
-    #[command(subcommand)]
-    create: Option<CreateConfig>,
+    #[command(subcommand, name = "config")]
+    config: Option<CreateConfig>,
 }
 
 #[derive(Parser)]
 enum CreateConfig {
     /// Create a new configuration file
-    New,
+    Config,
 }
 
 fn main() -> std::io::Result<()> {
-    terminal::enable_raw_mode().unwrap();
     let opts = Options::parse();
+    terminal::enable_raw_mode().unwrap();
+
 
     // check if we need to create a new config file
-    let config = match opts.create {
-        Some(CreateConfig::New) => {
+    let config = match opts.config {
+        Some(CreateConfig::Config) => {
             let cfg = config::interactive_config();
             let serialized = serde_json::to_string(&cfg).unwrap();
             std::fs::write("config.json", serialized).unwrap();
             cfg
         }
         None => {
-            let file = std::fs::read_to_string(&opts.config);
+            let file = std::fs::read_to_string(&opts.config_file);
             
             match file {
                 Ok(file) => serde_json::from_str(&file).unwrap(),
