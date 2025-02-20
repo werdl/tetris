@@ -1,0 +1,1 @@
+{"move_left":"Left","move_right":"Right","hard_drop":"Char( )","soft_drop":"Down","rotate_cw":"Char(k)","rotate_ccw":"Char(u)","hold":"Char(h)","pause":"Char(p)","quit":"Char(q)","soft_drop_ms_per_cell":10}

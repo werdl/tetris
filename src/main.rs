@@ -1,8 +1,10 @@
 // filepath: /tetris/tetris/src/main.rs
+
 use std::io::{self, Write};
 use std::time::{Duration, Instant};
 
 use clap::Parser;
+use config::Config;
 use crossterm::{event, terminal, ExecutableCommand};
 
 mod grid;
@@ -28,7 +30,7 @@ mod constants {
 use grid::Grid;
 use utils::{handle_events, end_game};
 
-fn run(terminal: &mut ratatui::DefaultTerminal, opts: Options) -> Result<(), String> {
+fn run(terminal: &mut ratatui::DefaultTerminal, opts: Options, cfg: Config) -> Result<(), String> {
     let mut grid = Grid::new();
     let mut last_update = Instant::now();
 
@@ -59,7 +61,7 @@ fn run(terminal: &mut ratatui::DefaultTerminal, opts: Options) -> Result<(), Str
         while event::poll(Duration::from_millis(1)).unwrap() {
             if handle_events(&mut grid, |g| {
                 end_game(&g);
-            })? {
+            }, cfg.clone(), terminal)? {
                 cleanup_terminal();
                 std::process::exit(0);
             }
@@ -78,19 +80,58 @@ fn cleanup_terminal() {
 
 #[derive(Parser)]
 struct Options {
+    /// Start at a specific level (1-10)
     #[arg(short, long)]
     level: Option<u32>,
+
+    /// Path to the config file
+    #[arg(short, long, default_value = "config.json")]
+    config: String,
+
+    /// Create a configuration file
+    #[command(subcommand)]
+    create: Option<CreateConfig>,
+}
+
+#[derive(Parser)]
+enum CreateConfig {
+    /// Create a new configuration file
+    New,
 }
 
 fn main() -> std::io::Result<()> {
     terminal::enable_raw_mode().unwrap();
+    let opts = Options::parse();
+
+    // check if we need to create a new config file
+    let config = match opts.create {
+        Some(CreateConfig::New) => {
+            let cfg = config::interactive_config();
+            let serialized = serde_json::to_string(&cfg).unwrap();
+            std::fs::write("config.json", serialized).unwrap();
+            cfg
+        }
+        None => {
+            let file = std::fs::read_to_string(&opts.config);
+            
+            match file {
+                Ok(file) => serde_json::from_str(&file).unwrap(),
+                Err(_) => {
+                    let cfg = config::interactive_config();
+                    let serialized = serde_json::to_string(&cfg).unwrap();
+                    std::fs::write("config.json", serialized).unwrap();
+                    cfg
+                }
+            }
+        }
+    };
     io::stdout().execute(terminal::EnterAlternateScreen).unwrap();
     io::stdout().execute(crossterm::event::EnableMouseCapture).unwrap();
     let mut terminal = ratatui::init();
 
-    let opts = Options::parse();
 
-    let out = run(&mut terminal, opts);
+
+    let out = run(&mut terminal, opts, config);
     if out.is_err() {
         panic!("Error: {}", out.unwrap_err());
     }

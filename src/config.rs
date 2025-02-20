@@ -1,8 +1,11 @@
-use crossterm::event::KeyCode;
+use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::terminal;
 use serde::de::{self, Deserializer, Visitor};
 use serde::{Deserialize, Serialize, Serializer};
-use std::fmt;
+use std::io::Write;
+use std::{fmt, io};
 
+#[derive(Clone)]
 pub struct KeyCodeWrapper {
     pub code: KeyCode,
 }
@@ -126,17 +129,81 @@ impl<'de> Deserialize<'de> for KeyCodeWrapper {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
-    pub MoveLeft: KeyCodeWrapper,
-    pub MoveRight: KeyCodeWrapper,
-    pub HardDrop: KeyCodeWrapper,
-    pub SoftDrop: KeyCodeWrapper,
-    pub RotateCW: KeyCodeWrapper,
-    pub RotateCCW: KeyCodeWrapper,
-    pub Hold: KeyCodeWrapper,
-    pub Pause: KeyCodeWrapper,
-    pub Quit: KeyCodeWrapper,
+    pub move_left: KeyCodeWrapper,
+    pub move_right: KeyCodeWrapper,
+    pub hard_drop: KeyCodeWrapper,
+    pub soft_drop: KeyCodeWrapper,
+    pub rotate_cw: KeyCodeWrapper,
+    pub rotate_ccw: KeyCodeWrapper,
+    pub hold: KeyCodeWrapper,
+    pub pause: KeyCodeWrapper,
+    pub quit: KeyCodeWrapper,
 
-    pub SoftDropMsPerCell: u8,
+    pub soft_drop_ms_per_cell: u8,
+}
+
+fn input(prompt: String) -> KeyCodeWrapper {
+    // disable raw mode for print
+    terminal::disable_raw_mode().unwrap();
+    print!("{}", prompt);
+    io::Stdout::flush(&mut io::stdout()).unwrap();
+    terminal::enable_raw_mode().unwrap();
+    loop {
+        match event::read() {
+            Ok(Event::Key(key)) if key.kind == KeyEventKind::Press => {
+                // print the key pressed
+                terminal::disable_raw_mode().unwrap();
+                println!(
+                    "{}",
+                    serde_json::to_string(&KeyCodeWrapper { code: key.code }).unwrap()
+                );
+                terminal::enable_raw_mode().unwrap();
+                return KeyCodeWrapper { code: key.code };
+            }
+            _ => {}
+        }
+    }
+}
+
+pub fn interactive_config() -> Config {
+    let move_left = input("Press the key you want to use for moving left".to_string());
+    let move_right = input("Press the key you want to use for moving right".to_string());
+    let hard_drop = input("Press the key you want to use for hard dropping".to_string());
+    let soft_drop = input("Press the key you want to use for soft dropping".to_string());
+    let rotate_cw = input("Press the key you want to use for rotating clockwise".to_string());
+    let rotate_ccw =
+        input("Press the key you want to use for rotating counter-clockwise".to_string());
+    let hold = input("Press the key you want to use for holding".to_string());
+    let pause = input("Press the key you want to use for pausing".to_string());
+    let quit = input("Press the key you want to use for quitting".to_string());
+
+    terminal::disable_raw_mode().unwrap();
+    let soft_drop_ms_per_cell = loop {
+        println!("Enter the number of milliseconds you want to wait between each cell when soft dropping");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+        match input.trim().parse::<u8>() {
+            Ok(ms) => break ms,
+            Err(_) => {
+                println!("Invalid input, please enter a number");
+            }
+        }
+    };
+
+    terminal::enable_raw_mode().unwrap();
+
+    Config {
+        move_left,
+        move_right,
+        hard_drop,
+        soft_drop,
+        rotate_cw,
+        rotate_ccw,
+        hold,
+        pause,
+        quit,
+        soft_drop_ms_per_cell,
+    }
 }
